@@ -12,7 +12,8 @@ void cpu_init(cpu_context* ctx) {
     ctx->eip = 0x000FFF0; // стартовый адрес
     ctx->esp = MEM_SIZE - 4; // верх стека
     ctx->cs = 0x8; // базовый сегмент кода
-    ctx->gdtr = 0x1000; // пример адреса GDT 
+    ctx->gdtr = 0x1000; // пример адреса GDT
+    ctx->idtr = 0x2000; // инитиализация IDTR 
 }
 
 void cpu_interrupt(cpu_context* ctx, uint8_t int_num) {
@@ -45,10 +46,22 @@ int cpu_step(cpu_context* ctx) {
             ctx->eax = *(uint32_t*)&ctx->mem[ctx->eip+1];
             ctx->eip += 5;
             break;
+        case 0xE8: // CALL
+            ctx->mem[ctx->esp -= 4] = ctx->eip + 5;
+            ctx->eip += 4;
+            break;
+        case 0xC3: // RET
+            ctx->eip = *(uint32_t*)&ctx->mem[ctx->esp];
+            ctx->esp += 4;
+            break;
+        case 0xEB: // JMP short
+            ctx->eip += *(int8_t*)&ctx->mem[ctx->eip+1];
+            break;
         case 0x01: // ADD
             ctx->eax += *(uint32_t*)&ctx->mem[ctx->eip+1];
             update_flags(ctx, ctx->eax);
             ctx->eip += 5;
+            break;
         case 0x29: // SUB
             ctx->eax -= *(uint32_t*)&ctx->mem[ctx->eip+1];
             update_flags(ctx, ctx->eax);
